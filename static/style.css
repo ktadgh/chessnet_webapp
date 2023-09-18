@@ -1,0 +1,48 @@
+html {
+  min-height: 100%;/* fill the screen height to allow vertical alignement */
+  display: grid; /* display:flex works too since body is the only grid cell */
+}
+
+body {
+  margin: auto; background-color: black; color: white; font-family: "Ubuntu Mono", sans-serif;
+}
+
+input[type=text] {
+  border: none;
+  outline: none;
+  background-color: black;
+  color: #A0A0A0;
+  font-family: "Ubuntu Mono", sans-serif;
+  font-size: 20px;
+}
+
+input[type="radio"] {
+  appearance: none; /* Remove the default appearance */
+  -webkit-appearance: none; /* For older versions of webkit browsers */
+
+  width: 20px; /* Adjust the width as needed */
+  height: 20px; /* Adjust the height as needed */
+  border: 2px solid #45B941; /* Border color */
+  border-radius: 50%; /* Make it round */
+  margin-right: 10px; /* Add spacing between radio buttons */
+  font-family: "Ubuntu Mono", monospace;
+
+}
+
+/* Style the radio buttons when selected */
+input[type="radio"]:checked {
+  background-color: #45B941; /* Background color when selected */
+}
+
+/* Optional hover effect */
+input[type="radio"]:hover {
+    border-color: #389434; /* Color change on hover */
+}
+
+div#loading {
+    width: 125px;
+    height: 125px;
+    display: none;
+    background: url(spinner_w3.gif) no-repeat;
+    cursor: wait;
+    }

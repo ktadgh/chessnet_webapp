@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<link rel="stylesheet" href="../static/style.css">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <script type="text/javascript">// <![CDATA[
+        function loading(){
+            $("#loading").show();
+            $("#content").hide();
+        }
+// ]]></script>
+
+</head>
+<body>
+<div id="loading"></div>
+<form action="/rating">
+
+    <div id="content">
+        <p><center>
+        <h3>paste your game url and select color:</h3>
+        </center></p>
+        <p>
+        <!-- <p><center> -->
+            <input type="text" autocomplete = "off" autofocus type="text" name="name" placeholder="your game url">
+        <!-- </center></p> -->
+            <!-- <p><center> -->
+            <br>
+            <br>
+            <label>
+              <input type="radio" name="color" value="0" checked> white
+            </label>
+            <label>
+              <input type="radio" name="color" value="1"> black
+            </label>
+            <!-- </center></p>-->
+            <input type="submit"  hidden onclick="loading();">
+        </p>
+
+    </div>
+    </form>
+</body>
+</html>

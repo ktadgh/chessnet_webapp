@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<link rel="stylesheet" href="../static/style.css">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <script type="text/javascript">// <![CDATA[
+        function loading(){
+            $("#loading").show();
+            $("#content").hide();
+        }
+// ]]></script>
+
+</head>
+<body>
+<div id="loading"></div>
+<form action="/rating">
+    <fieldset>
+        <br>
+        <legend>insert game number and select pieces </legend>
+        <div id="content" style="text-align: center;">
+
+        <input autocomplete = "off" autofocus type="text" id="fname" name="name" placeholder="your game url"><br>
+
+        <input type="submit" `value="Submit now" hidden onclick="loading();"/>
+        </div>
+    </fieldset>
+
+
+</form>
+
+</body>
+</html>
