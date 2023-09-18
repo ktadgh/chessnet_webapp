@@ -46,3 +46,8 @@ div#loading {
     background: url(spinner_w3.gif) no-repeat;
     cursor: wait;
     }
+
+div#loading-text {
+    text-align: center;
+    margin-top: 80px; /* Adjust the spacing from the spinner */
+}

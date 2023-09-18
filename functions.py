@@ -9,6 +9,7 @@ from torch import nn
 import numpy
 from joblib import load
 import sklearn
+import chess.svg
 
 myclient = lichess.Client()
 
@@ -97,6 +98,47 @@ def get_times_and_evals(game_id,color, n, t): # let color be 0 for white and 1 f
     else:
         return black_process(evals, clocks, 60)
 
+def get_winner_loser(game_id, color):
+    pgn = myclient.export_by_id(game_id)
+    game = chess.pgn.read_game(io.StringIO(pgn))
+    white_player = game.headers.get("White", "Unknown White Player")
+    black_player = game.headers.get("Black", "Unknown Black Player")
+    result = game.headers.get("Result")
+
+    # converting the result string to points
+    print(result)
+    if result == '1-0':
+        white_points = '1'
+        black_points = '0'
+    elif result == '0-1':
+        white_points = '0'
+        black_points = '1'
+    else:
+        white_points = '1/2'
+        black_points = '1/2'
+
+
+    # converting color to active colors
+    if int(color) == 0:
+        white_color = "#4fc94f"
+        black_color = "#FFFFFF"
+    else:
+        black_color = "#4fc94f"
+        white_color = "#FFFFFF"
+    return ((white_player, white_color, white_points), (black_player,black_color, black_points))
+
+
+def get_last_board(game_id, color):
+    pgn = myclient.export_by_id(game_id)
+    game = chess.pgn.read_game(io.StringIO(pgn))
+    board = game.board()
+    for move in game.mainline_moves():
+        board.push(move)
+    svg = chess.svg.board(board,orientation = int(color), lastmove = move, colors = {'square light': '#c1f7c1', 'square dark':'#4fc94f', 'margin':'#000000', 'square light lastmove': '#f1f77c', 'square dark lastmove': '#f1f77c'})
+    # with open(f'board.svg', 'w') as fh:
+    #     fh.write(svg)
+    return svg
+
 class MyLSTM(nn.Module):
     def __init__(self, input_size, hidden_size, no_layers):
         super(MyLSTM, self).__init__()
@@ -174,3 +216,5 @@ def get_elo_prediction(game_id, color, n= 16,t=10, model_path='basic_model.pt', 
         pred_elo = model(eval).detach()
         final_elo = elo_sc.inverse_transform(pred_elo.unsqueeze(0))
     return int(final_elo[0,0])
+
+
