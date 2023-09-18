@@ -11,7 +11,8 @@ def form():
 
 @app.route("/rating")
 def rating():
-    name = request.args.get("name", "0")
+    name = request.args.get("name", "0").strip('https://lichess.org/')[0:8]
+    print(name)
     color = request.args.get("color", "0")
 
     # getting the image of the last move
