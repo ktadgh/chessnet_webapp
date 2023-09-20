@@ -10,72 +10,28 @@ import numpy
 from joblib import load
 import sklearn
 import chess.svg
+import re
 
 myclient = lichess.Client()
 
-def white_process(evals, clocks, start_time):
-    '''
-    :param eval: list of integer centipawn losses
-    :return: array of lists of [evaluation, centipawn loss]
-    '''
 
-    i = 0
-    old_eval = 36
-    old_clock = start_time
-    res = []
+def get_init_time(string):
+    t = string.split('+')
+    return int(t[0])
 
-    # iterating through centipawn losses
-    for eval in evals:
-        # subtracting the cpl for white's moves
-        if i % 2 ==0:
-            cpl = old_eval - eval
-            clock_time = old_clock - clocks[i]
-            res.append([cpl, clock_time])
-            old_eval = eval
-            old_clock = clocks[i]
-            i += 1
+def get_inc(string):
+    t = string.split('+')
+    return int(t[1])
 
-        # adding the cpl for black's moves
-        else:
-            old_eval = eval
-            #old_clock -= clocks[i]
-            i+=1
-
-    return numpy.array(res)
-def black_process(evals, clocks, start_time):
-    '''
-    :param eval: list of integer centipawn losses
-    :return: array of lists of [evaluation, centipawn loss]
-    '''
-
-    i = 0
-    old_eval = 36
-    old_clock = start_time
-    res = []
-
-    # iterating through centipawn losses
-    for eval in evals:
-
-        # subtracting the cpl for white's moves
-        if i % 2 ==1:
-            cpl = eval - old_eval
-            clock_time = old_clock - clocks[i]
-            res.append([cpl,clocks[i]])
-            old_eval = eval
-            old_clock = clocks[i]
-            i += 1
-
-        # adding the cpl for black's moves
-        else:
-            old_eval = eval
-            #old_clock -= clocks[i]
-            i+=1
-
-    return numpy.array(res)
 
 def get_times_and_evals(game_id,color, n, t): # let color be 0 for white and 1 for black
     pgn = myclient.export_by_id(game_id)
     game = chess.pgn.read_game(io.StringIO(pgn))
+
+    # getting starting time and increment
+    increment = get_inc(game.headers['TimeControl'])
+    start_time= get_init_time(game.headers['TimeControl'])
+
     move_number =0
     evals = []
     clocks = []
@@ -91,22 +47,32 @@ def get_times_and_evals(game_id,color, n, t): # let color be 0 for white and 1 f
         move_number += 1
     engine.quit()
 
-    #times = np.diff(clocks)
     if color == 0:
-        return white_process(evals,clocks, 60)
+        return white_process(evals,clocks, start_time, start_time, increment )
 
     else:
-        return black_process(evals, clocks, 60)
+        return black_process(evals, clocks, start_time, start_time, increment )
 
 def get_winner_loser(game_id, color):
-    pgn = myclient.export_by_id(game_id)
+    pgn = myclient.export_by_id(game_id, literate=True)
     game = chess.pgn.read_game(io.StringIO(pgn))
+    last_move = game.end()
+
+    re1 = re.sub(r"\[.+\]",'',str(last_move))
+    re2 = re.sub(r'{ ','', re1)
+    re3 = re.sub(r' }', '', re2)
+    re4 = re.sub(r'\d+\.', '', re3)
+    re5 = re.sub(r'\D\D\d.  ','', re4)
+
+    method_of_victory = re5.strip()
     white_player = game.headers.get("White", "Unknown White Player")
     black_player = game.headers.get("Black", "Unknown Black Player")
+    white_elo = game.headers.get("WhiteElo", "?")
+    black_elo = game.headers.get("BlackElo", "?")
     result = game.headers.get("Result")
 
     # converting the result string to points
-    print(result)
+
     if result == '1-0':
         white_points = '1'
         black_points = '0'
@@ -125,7 +91,7 @@ def get_winner_loser(game_id, color):
     else:
         black_color = "#4fc94f"
         white_color = "#FFFFFF"
-    return ((white_player, white_color, white_points), (black_player,black_color, black_points))
+    return ((white_player, white_color, white_elo, white_points), (black_player,black_color,black_elo, black_points), method_of_victory)
 
 
 def get_last_board(game_id, color):
@@ -145,10 +111,10 @@ class MyLSTM(nn.Module):
         self.hidden_size = hidden_size
         self.no_layers = no_layers
         torch.manual_seed(1)
-        self.lstm = nn.LSTM(input_size, hidden_size, no_layers, batch_first = True, bias = True, dropout = 0.25)
+        self.lstm = nn.LSTM(input_size, hidden_size, no_layers, batch_first = True, bias = True, dropout = 0.3)
         torch.manual_seed(2)
-        self.fc = nn.Linear(hidden_size,1, bias = False)
-        self.final = nn.ReLU()
+        self.fc = nn.Linear(hidden_size,1, bias = True)
+        self.final = nn.LeakyReLU()
 
     def forward(self, x):
 
@@ -161,11 +127,10 @@ class MyLSTM(nn.Module):
 
 
         out = self.fc(out)
-        out = self.final(out)
+        #out = self.final(out)
         out = out[:,0]
 
         return out
-
 class MyCollator(object):
     '''
     Yields a batch from a list of Items
@@ -187,12 +152,11 @@ class MyCollator(object):
 
 #values = get_times_and_evals('KapVtqnn',0, 16, 20)
 
-def get_elo_prediction(game_id, color, n= 16,t=10, model_path='basic_model.pt', scaler_path='std_scaler.bin'):
+def get_elo_prediction(game_id, color, n= 16,t=10, model_path='main_model.pt', scaler_path='std_scaler.bin'):
     # defining parameters for the neural net
-    input_size = 2
-    hidden_size = 40
-    no_layers = 4
-    batch_size = 64
+    input_size = 4
+    hidden_size = 50
+    no_layers = 3
     model = MyLSTM(input_size, hidden_size, no_layers)
     model.load_state_dict(torch.load(model_path))
     elo_sc=load(scaler_path)
@@ -201,8 +165,11 @@ def get_elo_prediction(game_id, color, n= 16,t=10, model_path='basic_model.pt', 
     value = get_times_and_evals(game_id,color, n, t)
     #print(value) # Just checking everything is ok vs Lichess analysis
     collate = MyCollator()
-    eval = torch.tensor(value, dtype = torch.float32)
-    transformed = w_eval.transform(eval)
+    eval = torch.tensor(value, dtype=torch.float32)
+    if color == 0:
+        transformed = w_eval.transform(eval)
+    else:
+        transformed = b_eval.transform(eval)
     trans_tens = torch.tensor(transformed, dtype = torch.float32)
     # zipping the eval with a dummy elo, just so it works with my collate function
 
@@ -210,11 +177,111 @@ def get_elo_prediction(game_id, color, n= 16,t=10, model_path='basic_model.pt', 
     data_loader = torch.utils.data.DataLoader(data, batch_size=1, shuffle=False, collate_fn=collate)
 
 
-
-
     for eval, elo in data_loader:
         pred_elo = model(eval).detach()
         final_elo = elo_sc.inverse_transform(pred_elo.unsqueeze(0))
     return int(final_elo[0,0])
 
+### Defining the neural network
+class MyLSTM(nn.Module):
+    def __init__(self, input_size, hidden_size, no_layers):
+        super(MyLSTM, self).__init__()
+        self.hidden_size = hidden_size
+        self.no_layers = no_layers
+        torch.manual_seed(1)
+        self.lstm = nn.LSTM(input_size, hidden_size, no_layers, batch_first = True, bias = True, dropout = 0, bidirectional=True)
+        torch.manual_seed(2)
+        self.fc = nn.Linear(hidden_size*2,1, bias = True)
+        self.final = nn.LeakyReLU()
+
+    def forward(self, x):
+        output ,lengths = torch.nn.utils.rnn.pad_packed_sequence(x, batch_first = True)
+        # print(f"SHAPE = {output.size()}")
+        #print(f"FX NN: {output[7]}")
+        out, _ = self.lstm(x)
+        output ,lengths = torch.nn.utils.rnn.pad_packed_sequence(out, batch_first = True)
+
+
+        out = [output[e, i-1,:].unsqueeze(0) for e, i in enumerate(lengths)]
+        out = torch.cat(out, dim = 0)
+
+
+        out = self.fc(out)
+        out = self.final(out)
+        out = out[:,0]
+       #print("OUTPUT SIZE :",{out.size()})
+
+        return out
+
+
+# processing data from the csv and calculating accuracy of each move
+# computing the move accuracy (as defined by Lichess)
+def win_percentage(eval):
+    return [50 + 50 * (2 / (1 + np.exp(-0.00368208 * centipawns)) - 1) for centipawns in eval]
+
+def accuracy(win_prc_init, win_prc_fin):
+    return 103.1668 * np.exp(-0.04354 * (win_prc_init -win_prc_fin)) - 3.1669
+
+def black_process(evals, clocks, start_time, total_time, increment):
+    '''
+    :param eval: list of integer centipawn losses
+    :return: array of lists of [evaluation, centipawn loss]
+
+    '''
+
+    i = 0
+    old_win_prc = 50
+    old_clock = start_time
+    res = []
+
+    # iterating through centipawn losses
+    for win_prc in win_percentage(evals):
+
+        # subtracting the cpl for white's moves
+        if i % 2 == 1:
+            acc = accuracy(old_win_prc, win_prc)
+            clock_time = old_clock - clocks[i]
+            res.append([acc, clock_time, total_time, increment])
+            old_win_prc = win_prc
+            old_clock = clocks[i]
+            i += 1
+
+        # adding the cpl for black's moves
+        else:
+            old_win_prc= win_prc
+            # old_clock -= clocks[i]
+            i += 1
+
+    return numpy.array(res)
+
+def white_process(evals, clocks, start_time,total_time, increment):
+    '''
+    :param eval: list of integer centipawn losses
+    :return: array of lists of [evaluation, centipawn loss]
+    '''
+
+    i = 0
+    old_win_prc = 50
+    old_clock = start_time
+    res = []
+
+    # iterating through centipawn losses
+    for win_prc in win_percentage(evals):
+
+        # subtracting the cpl for white's moves
+        if i % 2 ==0:
+            acc = accuracy(old_win_prc, win_prc)
+            clock_time = old_clock - clocks[i]
+            res.append([acc, clock_time, total_time, increment])
+            old_win_prc = win_prc
+            old_clock = clocks[i]
+            i += 1
+
+        # adding the cpl for black's moves
+        else:
+            old_win_prc= win_prc
+            #old_clock -= clocks[i]
+            i+=1
+
+    return numpy.array(res)
 

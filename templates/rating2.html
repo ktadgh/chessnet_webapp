@@ -4,7 +4,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <title>Results</title>
 
     <style>
         div {
@@ -13,8 +13,8 @@
     </style>
 </head>
 <body>
-white: <span style="color: {{white_color}};">{{white_player}}</span>  {{white_points}} <br>
-black: <span style="color: {{black_color}};">{{black_player}}</span>  {{black_points}} <br>
+white: <span style="color: {{white_color}};">{{white_player}}</span>  {{white_elo}}  {{white_points}} <br>
+black: <span style="color: {{black_color}};">{{black_player}}</span>  {{black_elo}}  {{black_points}} <br>
 <br>
 <br>
 your rating:
@@ -46,6 +46,9 @@ final position:
 <br>
 <br>
 <img src="data:image/svg+xml;base64,{{ svg_base64 }}" alt="Fetched SVG Image" width = "350", height = "350">
-
+<br>
+<br>
+<br>
+method of victory: {{method_of_victory}}
 </body>
 </html>
