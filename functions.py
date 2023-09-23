@@ -189,9 +189,10 @@ class MyLSTM(nn.Module):
         self.hidden_size = hidden_size
         self.no_layers = no_layers
         torch.manual_seed(1)
-        self.lstm = nn.LSTM(input_size, hidden_size, no_layers, batch_first = True, bias = True, dropout = 0, bidirectional=True)
+        self.lstm = nn.RNN(input_size, hidden_size, no_layers, batch_first = True, bias = True, dropout = 0, bidirectional=True, nonlinearity = 'relu')
         torch.manual_seed(2)
-        self.fc = nn.Linear(hidden_size*2,1, bias = True)
+        self.fc = nn.Linear(hidden_size*2,hidden_size*2, bias = True)
+        self.end = nn.Linear(hidden_size*2,1, bias = True)
         self.final = nn.LeakyReLU()
 
     def forward(self, x):
@@ -208,6 +209,7 @@ class MyLSTM(nn.Module):
 
         out = self.fc(out)
         out = self.final(out)
+        out = self.end(out)
         out = out[:,0]
        #print("OUTPUT SIZE :",{out.size()})
 
@@ -222,7 +224,7 @@ def win_percentage(eval):
 def accuracy(win_prc_init, win_prc_fin):
     return 103.1668 * np.exp(-0.04354 * (win_prc_init -win_prc_fin)) - 3.1669
 
-def black_process(evals, clocks, start_time, total_time, increment):
+def black_process(evals, clocks, start_time, total_time, increment,white_elo):
     '''
     :param eval: list of integer centipawn losses
     :return: array of lists of [evaluation, centipawn loss]
@@ -235,13 +237,13 @@ def black_process(evals, clocks, start_time, total_time, increment):
     res = []
 
     # iterating through centipawn losses
-    for win_prc in win_percentage(evals):
+    for win_prc in win_percentage([-eval for eval in evals]):
 
         # subtracting the cpl for white's moves
         if i % 2 == 1:
             acc = accuracy(old_win_prc, win_prc)
             clock_time = old_clock - clocks[i]
-            res.append([acc, clock_time, total_time, increment])
+            res.append([acc, clock_time, total_time, increment, white_elo])
             old_win_prc = win_prc
             old_clock = clocks[i]
             i += 1
@@ -254,7 +256,7 @@ def black_process(evals, clocks, start_time, total_time, increment):
 
     return numpy.array(res)
 
-def white_process(evals, clocks, start_time,total_time, increment):
+def white_process(evals, clocks, start_time,total_time, increment, black_elo):
     '''
     :param eval: list of integer centipawn losses
     :return: array of lists of [evaluation, centipawn loss]
@@ -272,7 +274,7 @@ def white_process(evals, clocks, start_time,total_time, increment):
         if i % 2 ==0:
             acc = accuracy(old_win_prc, win_prc)
             clock_time = old_clock - clocks[i]
-            res.append([acc, clock_time, total_time, increment])
+            res.append([acc, clock_time, total_time, increment, black_elo])
             old_win_prc = win_prc
             old_clock = clocks[i]
             i += 1
