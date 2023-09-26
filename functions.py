@@ -48,10 +48,12 @@ def get_times_and_evals(game_id,color, n, t): # let color be 0 for white and 1 f
     engine.quit()
 
     if color == 0:
-        return white_process(evals,clocks, start_time, start_time, increment )
+        oppElo = float(game.headers['BlackElo'])
+        return white_process(evals,clocks, start_time, start_time, increment,oppElo )
 
     else:
-        return black_process(evals, clocks, start_time, start_time, increment )
+        oppElo = float(game.headers['WhiteElo'])
+        return black_process(evals, clocks, start_time, start_time, increment,oppElo )
 
 def get_winner_loser(game_id, color):
     pgn = myclient.export_by_id(game_id, literate=True)
@@ -105,32 +107,6 @@ def get_last_board(game_id, color):
     #     fh.write(svg)
     return svg
 
-class MyLSTM(nn.Module):
-    def __init__(self, input_size, hidden_size, no_layers):
-        super(MyLSTM, self).__init__()
-        self.hidden_size = hidden_size
-        self.no_layers = no_layers
-        torch.manual_seed(1)
-        self.lstm = nn.LSTM(input_size, hidden_size, no_layers, batch_first = True, bias = True, dropout = 0.3)
-        torch.manual_seed(2)
-        self.fc = nn.Linear(hidden_size,1, bias = True)
-        self.final = nn.LeakyReLU()
-
-    def forward(self, x):
-
-        out, _ = self.lstm(x)
-        output ,lengths = torch.nn.utils.rnn.pad_packed_sequence(out, batch_first = True)
-
-
-        out = [output[e, i-1,:].unsqueeze(0)for e, i in enumerate(lengths)]
-        out = torch.cat(out, dim = 0)
-
-
-        out = self.fc(out)
-        #out = self.final(out)
-        out = out[:,0]
-
-        return out
 class MyCollator(object):
     '''
     Yields a batch from a list of Items
@@ -154,32 +130,33 @@ class MyCollator(object):
 
 def get_elo_prediction(game_id, color, n= 16,t=10, model_path='main_model.pt', scaler_path='std_scaler.bin'):
     # defining parameters for the neural net
-    input_size = 4
-    hidden_size = 50
-    no_layers = 3
+    input_size = 5
+    hidden_size = 8
+    no_layers = 2
     model = MyLSTM(input_size, hidden_size, no_layers)
     model.load_state_dict(torch.load(model_path))
-    elo_sc=load(scaler_path)
-    w_eval = load('w_eval_scaler.bin')
-    b_eval = load('b_eval_scaler.bin')
+    eval_scale = load('eval_scaler.bin')
+    target_scale = load('target_scaler.bin')
+
     value = get_times_and_evals(game_id,color, n, t)
+
     #print(value) # Just checking everything is ok vs Lichess analysis
     collate = MyCollator()
     eval = torch.tensor(value, dtype=torch.float32)
     if color == 0:
-        transformed = w_eval.transform(eval)
+        transformed = eval_scale.transform(eval)
     else:
-        transformed = b_eval.transform(eval)
+        transformed = eval_scale.transform(eval)
     trans_tens = torch.tensor(transformed, dtype = torch.float32)
-    # zipping the eval with a dummy elo, just so it works with my collate function
 
+    # zipping the eval with a dummy elo, just so it works with my collate function
     data = list(zip([trans_tens], [torch.tensor([0.0])]))
     data_loader = torch.utils.data.DataLoader(data, batch_size=1, shuffle=False, collate_fn=collate)
 
 
     for eval, elo in data_loader:
         pred_elo = model(eval).detach()
-        final_elo = elo_sc.inverse_transform(pred_elo.unsqueeze(0))
+        final_elo = target_scale.inverse_transform(pred_elo.unsqueeze(0).unsqueeze(0))
     return int(final_elo[0,0])
 
 ### Defining the neural network
@@ -188,32 +165,35 @@ class MyLSTM(nn.Module):
         super(MyLSTM, self).__init__()
         self.hidden_size = hidden_size
         self.no_layers = no_layers
-        torch.manual_seed(1)
-        self.lstm = nn.RNN(input_size, hidden_size, no_layers, batch_first = True, bias = True, dropout = 0, bidirectional=True, nonlinearity = 'relu')
-        torch.manual_seed(2)
-        self.fc = nn.Linear(hidden_size*2,hidden_size*2, bias = True)
-        self.end = nn.Linear(hidden_size*2,1, bias = True)
-        self.final = nn.LeakyReLU()
+        self.lstm = nn.LSTM(input_size, hidden_size, no_layers, batch_first = True, bias = True, dropout = 0, bidirectional=True)
+        #self.fc = nn.Linear(hidden_size*2*no_layers,hidden_size*2*no_layers, bias = False)
+        self.end = nn.Linear(hidden_size*2*no_layers,1, bias = False)
+        torch.nn.init.xavier_normal_(self.lstm.weight_ih_l0, gain = 5)
+        torch.nn.init.xavier_normal_(self.lstm.weight_hh_l0, gain=5)
+        #self.final = nn.LeakyReLU()
+
 
     def forward(self, x):
-        output ,lengths = torch.nn.utils.rnn.pad_packed_sequence(x, batch_first = True)
-        # print(f"SHAPE = {output.size()}")
-        #print(f"FX NN: {output[7]}")
-        out, _ = self.lstm(x)
-        output ,lengths = torch.nn.utils.rnn.pad_packed_sequence(out, batch_first = True)
+        _, (hidden, cells) = self.lstm(x)
+        #output, lengths = torch.nn.utils.rnn.pad_packed_sequence(out, batch_first=True)
+        #print(f"OUT SIZE {output.size()}")
+        h1 = hidden.transpose(1,0)
 
+        l1 = h1.detach().size()[0]
+        h = h1.reshape(l1,-1)
+        #output ,lengths = torch.nn.utils.rnn.pad_packed_sequence(out, batch_first = True)
+        #print(output.size())
 
-        out = [output[e, i-1,:].unsqueeze(0) for e, i in enumerate(lengths)]
-        out = torch.cat(out, dim = 0)
-
-
-        out = self.fc(out)
-        out = self.final(out)
-        out = self.end(out)
-        out = out[:,0]
+        #out = [output[e, i-1,:].unsqueeze(0) for e, i in enumerate(lengths)]
+        #out = torch.cat(out, dim = 0)
+        #print(f"size of edited output: {out.size()}")
+        #out = self.fc(h)
+        #out= self.final(out)
+        out= self.end(h)
+        output = torch.squeeze(out)
        #print("OUTPUT SIZE :",{out.size()})
 
-        return out
+        return output
 
 
 # processing data from the csv and calculating accuracy of each move
