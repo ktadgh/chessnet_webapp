@@ -6,8 +6,8 @@
 Using a Recurrent Neural network (LSTM) to predict a player's ELO rating based on Stockfish's evaluation of a single game and time spent per move. The network takes per move clock times, accuracy, and the time control as input. Results of the model are shown below, compared to a basic linear regression model based on average accuracy. The model appears to be outperforming the average centipawn loss model in mean squared error, and also predicts a wider range of values. 
 
 <p float="left">
-<img src=https://github.com/ktadgh/chessnet/blob/main/baseline.pdf width="350" height="300" /> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-<img src=https://github.com/ktadgh/chessnet/blob/main/images/nn.pdf width="350" height="300" />
+<img src=https://github.com/ktadgh/chessnet_webapp/blob/master/baseline.png width="350" height="300" /> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+<img src=https://github.com/ktadgh/chessnet_webapp/blob/master/nn.png width="350" height="300" />
  </p>
 
 ## Blitz Project
