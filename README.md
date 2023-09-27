@@ -13,11 +13,10 @@ def custom_loss(outputs, elo):
     sample_var = ((outputs - outputs.mean())**2).mean()
     true_var = ((elo - elo.mean())**2).mean()
     var_error = (sample_var-true_var)**2
-    
-    # trying to match minima and maxima
     sample_kurt = ((outputs - outputs.mean())**4).mean()
     true_kurt = ((elo - elo.mean())**4).mean()
-    kurt_error = (sample_kurt-true_kurt)**2 
+    kurt_error = (sample_kurt-true_kurt)**2
+
     return mse_loss+ kurt_error/20 + var_error/20
 ```
 
