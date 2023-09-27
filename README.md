@@ -20,7 +20,7 @@ def custom_loss(outputs, elo):
     return mse_loss+ kurt_error/20 + var_error/20
 ```
 
-The neural net used 3 hidden layers each with 24 nodes.
+The neural net used 3 hidden layers each with 24 nodes. The final hidden layer of the nerual network was fed into a final linear layer with one output. The LSTM was bidirectional, and both the forward and backward final hidden layers are used in the linear layer.
 
 
 <p float="left">
