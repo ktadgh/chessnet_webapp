@@ -28,16 +28,6 @@ The neural net used 3 hidden layers each with 24 nodes. The final hidden layer o
 <img src=https://github.com/ktadgh/chessnet_webapp/blob/master/nn.png width="350" height="300" />
  </p>
 
-## Blitz Project
-Using logistic regression to predict the result of a chess game based on the players' ELO ratings and other factors.
-The regression model returns the predicted probability of a win, loss and draw, and overall can predict the expected points more accurately
-than the ELO alone.
-
-<p float="left">
-<img src=https://github.com/ktadgh/chessnet/blob/main/images/ELO_acc.png width="350" height="300" /> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-<img src=https://github.com/ktadgh/chessnet/blob/main/images/Model_acc.png width="350" height="300" />
- </p>
-
 
 ## Contents
 ├───Blitz Project.ipynb - *Notebook containing the analysis and logistic regression model*\
