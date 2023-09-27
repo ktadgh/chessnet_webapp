@@ -24,8 +24,8 @@ The neural net used 3 hidden layers each with 24 nodes. The final hidden layer o
 
 
 <p float="left">
-<img src=https://github.com/ktadgh/chessnet_webapp/blob/master/baseline.png width="350" height="300" /> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-<img src=https://github.com/ktadgh/chessnet_webapp/blob/master/nn.png width="350" height="300" />
+<img src=https://github.com/ktadgh/chessnet_webapp/blob/master/static/baseline.png width="350" height="300" /> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+<img src=https://github.com/ktadgh/chessnet_webapp/blob/master/static/nn.png width="350" height="300" />
  </p>
 
 
