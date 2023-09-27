@@ -11,6 +11,7 @@ from joblib import load
 import sklearn
 import chess.svg
 import re
+from torch.autograd.functional import jacobian
 
 myclient = lichess.Client()
 
@@ -64,9 +65,10 @@ def get_winner_loser(game_id, color):
     re2 = re.sub(r'{ ','', re1)
     re3 = re.sub(r' }', '', re2)
     re4 = re.sub(r'\d+\.', '', re3)
-    re5 = re.sub(r'\D\D\d.  ','', re4)
-
-    method_of_victory = re5.strip()
+    re5 = re.sub(r'\D\D\D\d.', '', re4)
+    re6 = re.sub(r'\D\D\d.','', re5)
+    re7 = re.sub(r'\D\D\d', '', re6)
+    method_of_victory = re7.strip()
     white_player = game.headers.get("White", "Unknown White Player")
     black_player = game.headers.get("Black", "Unknown Black Player")
     white_elo = game.headers.get("WhiteElo", "?")
@@ -102,7 +104,7 @@ def get_last_board(game_id, color):
     board = game.board()
     for move in game.mainline_moves():
         board.push(move)
-    svg = chess.svg.board(board,orientation = int(color), lastmove = move, colors = {'square light': '#c1f7c1', 'square dark':'#4fc94f', 'margin':'#000000', 'square light lastmove': '#f1f77c', 'square dark lastmove': '#f1f77c'})
+    svg = chess.svg.board(board,orientation = abs(int(color)-1), lastmove = move, colors = {'square light': '#c1f7c1', 'square dark':'#4fc94f', 'margin':'#000000', 'square light lastmove': '#f1f77c', 'square dark lastmove': '#f1f77c'})
     # with open(f'board.svg', 'w') as fh:
     #     fh.write(svg)
     return svg
@@ -130,11 +132,12 @@ class MyCollator(object):
 
 def get_elo_prediction(game_id, color, n= 16,t=10, model_path='main_model.pt', scaler_path='std_scaler.bin'):
     # defining parameters for the neural net
-    input_size = 5
-    hidden_size = 8
-    no_layers = 2
+    input_size = 6
+    hidden_size = 24
+    no_layers = 3
     model = MyLSTM(input_size, hidden_size, no_layers)
     model.load_state_dict(torch.load(model_path))
+    model.eval()
     eval_scale = load('eval_scaler.bin')
     target_scale = load('target_scaler.bin')
 
@@ -165,7 +168,7 @@ class MyLSTM(nn.Module):
         super(MyLSTM, self).__init__()
         self.hidden_size = hidden_size
         self.no_layers = no_layers
-        self.lstm = nn.LSTM(input_size, hidden_size, no_layers, batch_first = True, bias = True, dropout = 0, bidirectional=True)
+        self.lstm = nn.LSTM(input_size, hidden_size, no_layers, batch_first = True, bias = True, dropout = 0.6, bidirectional=True)
         #self.fc = nn.Linear(hidden_size*2*no_layers,hidden_size*2*no_layers, bias = False)
         self.end = nn.Linear(hidden_size*2*no_layers,1, bias = False)
         torch.nn.init.xavier_normal_(self.lstm.weight_ih_l0, gain = 5)
@@ -247,6 +250,7 @@ def white_process(evals, clocks, start_time,total_time, increment, black_elo):
     old_clock = start_time
     res = []
 
+    #print(f"WIN PERCENTAGES = {win_percentage(evals)}")
     # iterating through centipawn losses
     for win_prc in win_percentage(evals):
 
@@ -267,3 +271,130 @@ def white_process(evals, clocks, start_time,total_time, increment, black_elo):
 
     return numpy.array(res)
 
+
+### Note- trying it out with no black elo
+def black_process(evals, clocks, start_time, total_time, increment,white_elo):
+    '''
+    :param eval: list of integer centipawn losses
+    :return: array of lists of [evaluation, centipawn loss]
+
+    '''
+
+    i = 0
+    old_win_prc = 50
+    old_clock = old_white_clock =start_time
+    res = []
+    bevals = [-eval for eval in evals]
+    # iterating through centipawn losses
+    for index, win_prc in enumerate(win_percentage(bevals)):
+
+        # subtracting the cpl for white's moves
+        if index % 2 == 1:
+            acc = accuracy(old_win_prc, win_prc)
+            clock_time = old_clock - clocks[index]
+            res.append([acc,wh_acc, white_clock, clock_time, total_time, increment])
+            old_win_prc = win_prc
+            old_clock = clocks[index]
+
+
+
+        # adding the cpl for black's moves
+        else:
+            wh_acc = accuracy(100-old_win_prc, 100-win_prc)
+            old_win_prc= win_prc
+            white_clock =  old_white_clock - clocks[index]
+            old_white_clock = clocks[index]
+
+
+
+    return numpy.array(res)
+
+def white_process(evals, clocks, start_time,total_time, increment, black_elo):
+    '''
+    :param eval: list of integer centipawn losses
+    :return: array of lists of [evaluation, centipawn loss]
+    '''
+
+    i = 0
+    old_win_prc = 50
+    bl_acc = 100
+    old_clock = old_black_clock =start_time
+    res = []
+    black_clock = 0
+
+    #print(f"WIN PERCENTAGES = {win_percentage(evals)}")
+    # iterating through centipawn losses
+    for index, win_prc in enumerate(win_percentage(evals)):
+        # subtracting the cpl for white's moves
+        if index % 2 ==0:
+            acc = accuracy(old_win_prc, win_prc)
+            #print(old_win_prc,win_prc,acc)
+            clock_time = old_clock - clocks[index]
+            res.append([acc, bl_acc, black_clock, clock_time, total_time, increment])
+            old_win_prc = win_prc
+            old_clock = clocks[index]
+
+
+        # adding the cpl for black's moves
+        else:
+            bl_acc = accuracy(100-old_win_prc, 100-win_prc)
+            old_win_prc= win_prc
+            black_clock = old_black_clock - clocks[index]
+            old_black_clock = clocks[index]
+
+    return numpy.array(res)
+
+# def combiner(evals, clocks, start_time,total_time, increment, black_elo):
+#     white_res = white_process(evals, clocks, start_time,total_time, increment, black_elo)
+#     black_res = black_process(evals, clocks, start_time,total_time, increment, black_elo)
+#     return numpy.concatenate([white_res,black_res], axis = 1)
+def get_key_moves(game_id, color, n= 16,t=10, model_path='main_model.pt', scaler_path='std_scaler.bin'):
+    # defining parameters for the neural net
+    input_size = 6
+    hidden_size = 24
+    no_layers = 3
+    model = MyLSTM(input_size, hidden_size, no_layers)
+    model.load_state_dict(torch.load(model_path))
+    model.eval()
+    eval_scale = load('eval_scaler.bin')
+    target_scale = load('target_scaler.bin')
+
+    value = get_times_and_evals(game_id,color, n, t)
+
+    #print(value) # Just checking everything is ok vs Lichess analysis
+    collate = MyCollator()
+    returns = np.zeros(len(value))
+    for i in range(len(value)):
+        eval = torch.tensor(value, dtype=torch.float32)
+        eval[i,0] = 100
+        if color == 0:
+            transformed = eval_scale.transform(eval)
+        else:
+            transformed = eval_scale.transform(eval)
+        trans_tens = torch.tensor(transformed, dtype = torch.float32)
+        data = list(zip([trans_tens], [torch.tensor([0.0])]))
+        data_loader = torch.utils.data.DataLoader(data, batch_size=1, shuffle=False, collate_fn=collate)
+
+        for eval, elo in data_loader:
+            pred_elo = model(eval).detach()
+            final_elo = target_scale.inverse_transform(pred_elo.unsqueeze(0).unsqueeze(0))
+        returns[i] = final_elo
+    argmin = int(torch.argmin(torch.tensor(returns)))
+    return returns, argmin
+
+def elos_with_100(game_id, color, n= 16,t=10, model_path='main_model.pt', scaler_path='std_scaler.bin'):
+    # defining parameters for the neural net
+    input_size = 6
+    hidden_size = 24
+    no_layers = 3
+    model = MyLSTM(input_size, hidden_size, no_layers)
+    model.load_state_dict(torch.load(model_path))
+    model.eval()
+    eval_scale = load('eval_scaler.bin')
+    target_scale = load('target_scaler.bin')
+
+    value = get_times_and_evals(game_id,color, n, t)
+
+    #print(value) # Just checking everything is ok vs Lichess analysis
+    collate = MyCollator()
+    eval = torch.tensor(value, dtype=torch.float32)
