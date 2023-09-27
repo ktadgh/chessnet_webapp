@@ -138,8 +138,8 @@ def get_elo_prediction(game_id, color, n= 16,t=10, model_path='main_model.pt', s
     model = MyLSTM(input_size, hidden_size, no_layers)
     model.load_state_dict(torch.load(model_path))
     model.eval()
-    eval_scale = load('eval_scaler.bin')
-    target_scale = load('target_scaler.bin')
+    eval_scale = load('static/eval_scaler.bin')
+    target_scale = load('static/target_scaler.bin')
 
     value = get_times_and_evals(game_id,color, n, t)
 
@@ -356,8 +356,8 @@ def get_key_moves(game_id, color, n= 16,t=10, model_path='main_model.pt', scaler
     model = MyLSTM(input_size, hidden_size, no_layers)
     model.load_state_dict(torch.load(model_path))
     model.eval()
-    eval_scale = load('eval_scaler.bin')
-    target_scale = load('target_scaler.bin')
+    eval_scale = load('static/eval_scaler.bin')
+    target_scale = load('static/target_scaler.bin')
 
     value = get_times_and_evals(game_id,color, n, t)
 
@@ -390,8 +390,8 @@ def elos_with_100(game_id, color, n= 16,t=10, model_path='main_model.pt', scaler
     model = MyLSTM(input_size, hidden_size, no_layers)
     model.load_state_dict(torch.load(model_path))
     model.eval()
-    eval_scale = load('eval_scaler.bin')
-    target_scale = load('target_scaler.bin')
+    eval_scale = load('static/eval_scaler.bin')
+    target_scale = load('static/target_scaler.bin')
 
     value = get_times_and_evals(game_id,color, n, t)
 
