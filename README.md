@@ -30,15 +30,33 @@ The neural net used 3 hidden layers each with 24 nodes. The final hidden layer o
 
 
 ## Contents
-├───Blitz Project.ipynb - *Notebook containing the analysis and logistic regression model*\
-├───Database.ipynb - *The functions used to generate csvs from the pgns* \
-├───NeuralNet - *Notebook containing the Neural Network* \
-├───moves_process.py - *Functions to get game performance metrics*\
-├───images - *Contains the graphs included above*\
-├───README.md\
-├───csvs\
-├───pgns\
-├───stockfish_15_win_x64_avx2 - *engine used for the evaluations*
+├── application.py\
+├── Dockerfile\
+├── functions.py\
+├── main_model.pt\
+├── NeuralNet.ipynb\
+├── poetry.lock\
+├── pyproject.toml\
+├── README.md\
+├── requirements.txt\
+├── static\
+│   ├── baseline.png\
+│   ├── eval_scaler.bin\
+│   ├── nn.png\
+│   ├── spinner.gif\
+│   ├── spinner_w2.gif\
+│   ├── spinner_w3.gif\
+│   ├── spinner_w.gif\
+│   ├── style.css\
+│   └── target_scaler.bin\
+├── stockfish\
+├── templates\
+│   ├── counter.js\
+│   ├── form2.html\
+│   ├── form3.html\
+│   ├── form.html\
+│   ├── rating2.html\
+│   └── rating.html\
 
 
 
