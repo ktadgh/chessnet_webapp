@@ -20,6 +20,9 @@ def custom_loss(outputs, elo):
     return mse_loss+ kurt_error/20 + var_error/20
 ```
 
+The neural net used 3 hidden layers each with 24 nodes.
+
+
 <p float="left">
 <img src=https://github.com/ktadgh/chessnet_webapp/blob/master/baseline.png width="350" height="300" /> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 <img src=https://github.com/ktadgh/chessnet_webapp/blob/master/nn.png width="350" height="300" />
